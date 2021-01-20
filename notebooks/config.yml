@@ -10,7 +10,7 @@ path_files:
 
 # data options
 data_options:
-    flagTrWMissingData: 2
+    flagTrWMissingData: 1
 #   load OI: work on SSH or anomaly w.r.t OI (SSH-OI)
     flagloadOIData: 1 
 #   use additional covariates in initial layer
