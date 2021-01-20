@@ -15,7 +15,7 @@ def FP_solver(dict_global_Params,genFilename,x_train,mask_train,gt_train,\
     # ***************** #
 
     # model fit
-    NbProjection   = [0,2,5,7]
+    NbProjection   = [5,5,5,5]
     if flagTrOuputWOMissingData==0:
         lrUpdate   = [1e-4,1e-5,1e-6,1e-7]
     else:

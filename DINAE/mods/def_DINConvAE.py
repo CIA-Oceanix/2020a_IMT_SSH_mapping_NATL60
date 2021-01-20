@@ -1,6 +1,5 @@
 from DINAE import *
 
-
 def slice_layer(index):
     def func(x_input):
         return tf.gather(x_input, index, axis=3)

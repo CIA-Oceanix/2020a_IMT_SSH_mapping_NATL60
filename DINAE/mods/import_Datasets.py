@@ -72,7 +72,7 @@ def import_Data(dict_global_Params,type_obs):
 
     # create the time series (additional 4th time dimension)
     x_train    = ndarray_NaN((len(indN_Tr),len(indLat),len(indLon),size_tw))
-    gt_train   = np.zeros((len(indN_Tr),len(indLat),len(indLon),size_tw))
+    gt_train   = ndarray_NaN((len(indN_Tr),len(indLat),len(indLon),size_tw))
     x_train_OI = ndarray_NaN((len(indN_Tr),len(indLat),len(indLon),size_tw))
     if include_covariates==True:
         cov_train      = []
@@ -153,7 +153,7 @@ def import_Data(dict_global_Params,type_obs):
 
     # create the time series (additional 4th time dimension)
     x_test    = ndarray_NaN((len(indN_Tt),len(indLat),len(indLon),size_tw))
-    gt_test = np.zeros((len(indN_Tt),len(indLat),len(indLon),size_tw))
+    gt_test   = ndarray_NaN((len(indN_Tt),len(indLat),len(indLon),size_tw))
     x_test_OI = ndarray_NaN((len(indN_Tt),len(indLat),len(indLon),size_tw))
     if include_covariates==True:
         cov_test      = []

@@ -10,7 +10,7 @@ path_files:
 
 # data options
 data_options:
-    flagTrWMissingData: 2
+    flagTrWMissingData: 1
 #   load OI: work on SSH or anomaly w.r.t OI (SSH-OI)
     flagloadOIData: 1 
 #   use additional covariates in initial layer
@@ -28,7 +28,7 @@ data_options:
 #   number of holes
     Nsquare: 3  
     sigNoise: 1e-1
-    flagTrOuputWOMissingData: 0
+    flagTrOuputWOMissingData: 1
     stdMask: 0.
     dropout: 0.0
     wl2: 0.0000
