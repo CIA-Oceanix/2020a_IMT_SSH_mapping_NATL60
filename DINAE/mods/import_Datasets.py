@@ -31,7 +31,11 @@ def import_Data(dict_global_Params,type_obs):
     # list of test dates
     indN_Tt = np.concatenate([np.arange(60,80),np.arange(140,160),\
                              np.arange(220,240),np.arange(300,320)])
-    indN_Tr = np.delete(range(365),indN_Tt)
+    indN_Tr = np.delete(range(365),indN_Tt)   
+    # list of test dates
+    #indN_Tt = np.arange(start_eval_index,end_eval_index)   # index of evaluation period
+    #indN_Tr = np.arange(start_train_index,end_train_index) # index of training period
+
     lday_test=[ datetime.strftime(datetime.strptime("2012-10-01",'%Y-%m-%d')\
                           + timedelta(days=np.float64(i)),"%Y-%m-%d") for i in indN_Tt ]
 
@@ -113,11 +117,11 @@ def import_Data(dict_global_Params,type_obs):
     # Build gappy (and potentially noisy) data train
     mask_train  = np.copy(x_train)
     mask_train  = np.asarray(~np.isnan(mask_train))
-    x_train_missing = x_train * mask_train
+    x_train = x_train * mask_train
     if len(id_rm)>0:
         gt_train        = np.delete(gt_train,id_rm,axis=0)
         x_train         = np.delete(x_train,id_rm,axis=0)
-        x_train_missing = np.delete(x_train_missing,id_rm,axis=0)
+        mask_train      = np.delete(mask_train,id_rm,axis=0)
         x_train_OI      = np.delete(x_train_OI,id_rm,axis=0)
     print('.... # loaded samples: %d '%x_train.shape[0])
 
@@ -126,7 +130,6 @@ def import_Data(dict_global_Params,type_obs):
     ind             = np.where( ss == 0 )
     x_train         = x_train[ind[0],:,:,:]
     gt_train        = gt_train[ind[0],:,:,:]
-    x_train_missing = x_train_missing[ind[0],:,:,:]
     mask_train      = mask_train[ind[0],:,:,:]
     if flagloadOIData == 1:
         x_train_OI  = x_train_OI[ind[0],:,:,:]
@@ -135,7 +138,6 @@ def import_Data(dict_global_Params,type_obs):
     ind             = np.where( rateMissDataTr_  >= thrMisData )
     gt_train        = gt_train[ind[0],:,:,:]
     x_train         = x_train[ind[0],:,:,:]
-    x_train_missing = x_train_missing[ind[0],:,:,:]
     mask_train      = mask_train[ind[0],:,:,:]
     if flagloadOIData == 1:
         x_train_OI = x_train_OI[ind[0],:,:,:]
@@ -192,7 +194,7 @@ def import_Data(dict_global_Params,type_obs):
     # Build gappy (and potentially noisy) data test
     mask_test  = np.copy(x_test)
     mask_test  = np.asarray(~np.isnan(mask_test))
-    x_test_missing = x_test * mask_test
+    x_test = x_test * mask_test
     print('.... # loaded samples: %d '%x_test.shape[0])
 
     # remove patch if no SSH data
@@ -200,7 +202,6 @@ def import_Data(dict_global_Params,type_obs):
     ind           = np.where( ss == 0 )
     x_test         = x_test[ind[0],:,:,:]
     gt_test        = gt_test[ind[0],:,:,:]
-    x_test_missing = x_test_missing[ind[0],:,:,:]
     mask_test      = mask_test[ind[0],:,:,:]
     if flagloadOIData == 1:
         x_test_OI = x_test_OI[ind[0],:,:,:]
@@ -209,7 +210,6 @@ def import_Data(dict_global_Params,type_obs):
     ind        = np.where( rateMissDataTr_  >= thrMisData )
     x_test         = x_test[ind[0],:,:,:]
     gt_test        = gt_test[ind[0],:,:,:]
-    x_test_missing = x_test_missing[ind[0],:,:,:]
     mask_test      = mask_test[ind[0],:,:,:]
     if flagloadOIData == 1:
         x_test_OI = x_test_OI[ind[0],:,:,:]
@@ -232,27 +232,23 @@ def import_Data(dict_global_Params,type_obs):
     print('....... Generic model filename: '+genFilename)
 
     if include_covariates==False:
-        meanTr          = np.mean( x_train )
-        stdTr           = np.sqrt( np.mean( x_train**2 ) )
+        meanTr          = np.nanmean( x_train )
+        stdTr           = np.sqrt( np.nanmean( x_train**2 ) )
         x_train         = (x_train - meanTr)/stdTr
-        x_train_missing = (x_train_missing - meanTr)/stdTr
         gt_train        = (gt_train - meanTr)/stdTr
         x_test          = (x_test  - meanTr)/stdTr
-        x_test_missing  = (x_test_missing - meanTr)/stdTr
         gt_test         = (gt_test - meanTr)/stdTr
     else:
         index = np.asarray([np.arange(i,(N_cov+1)*size_tw,(N_cov+1)) for i in range(N_cov+1)])
-        meanTr          = [np.mean(x_train[:,:,:,index[i,:]]) for i in range(N_cov+1)]
-        stdTr           = [np.sqrt(np.var(x_train[:,:,:,index[i,:]])) for i in range(N_cov+1)]
+        meanTr          = [np.nanmean(x_train[:,:,:,index[i,:]]) for i in range(N_cov+1)]
+        stdTr           = [np.sqrt(np.nanvar(x_train[:,:,:,index[i,:]])) for i in range(N_cov+1)]
         for i in range(N_cov+1):
             x_train[:,:,:,index[i]]         = (x_train[:,:,:,index[i]] - meanTr[i])/stdTr[i]
-            x_train_missing[:,:,:,index[i]] = (x_train_missing[:,:,:,index[i]] - meanTr[i])/stdTr[i]
             x_test[:,:,:,index[i]]          = (x_test[:,:,:,index[i]] - meanTr[i])/stdTr[i]
-            x_test_missing[:,:,:,index[i]]  = (x_test_missing[:,:,:,index[i]] - meanTr[i])/stdTr[i]
         gt_train = (gt_train - meanTr[0])/stdTr[0]
         gt_test  = (gt_test - meanTr[0])/stdTr[0]
     #print('... Mean and std of training data: %f  -- %f'%tuple(meanTr,stdTr))
 
-    return genFilename, x_train,y_train, mask_train, gt_train, x_train_missing, meanTr, stdTr, x_test, y_test, mask_test, gt_test, x_test_missing, lday_test, x_train_OI, x_test_OI
+    return genFilename, x_train,y_train, mask_train, gt_train, meanTr, stdTr, x_test, y_test, mask_test, gt_test, lday_test, x_train_OI, x_test_OI
 
 

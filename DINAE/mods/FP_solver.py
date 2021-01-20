@@ -2,8 +2,8 @@ from DINAE import *
 from .def_DINConvAE import *
 from .save_Models import *
 
-def FP_solver(dict_global_Params,genFilename,x_train,x_train_missing,mask_train,gt_train,\
-                        meanTr,stdTr,x_test,x_test_missing,mask_test,gt_test,lday_test,x_train_OI,x_test_OI,encoder,decoder,model_AE,DimCAE):
+def FP_solver(dict_global_Params,genFilename,x_train,mask_train,gt_train,\
+                        meanTr,stdTr,x_test,mask_test,gt_test,lday_test,x_train_OI,x_test_OI,encoder,decoder,model_AE,DimCAE):
 
     # import Global Parameters
     for key,val in dict_global_Params.items():
@@ -24,8 +24,10 @@ def FP_solver(dict_global_Params,genFilename,x_train,x_train_missing,mask_train,
     val_split      = 0.1
     
     ## initialization
-    x_train_init = np.copy(x_train_missing)
-    x_test_init  = np.copy(x_test_missing)
+    x_train_init = np.nan_to_num(x_train)
+    x_test_init  = np.nan_to_num(x_test)
+    gt_train     = np.nan_to_num(gt_train)
+    gt_test      = np.nan_to_num(gt_test)
 
     comptUpdate = 0
 
@@ -33,7 +35,7 @@ def FP_solver(dict_global_Params,genFilename,x_train,x_train_missing,mask_train,
     # Start Learning model #
     # ******************** #
         
-    print("..... Start learning AE model %d FP/Grad %s"%(flagAEType,flagOptimMethod))
+    print("..... Start learning AE model %d FP"%(flagAEType))
     for iter in range(0,Niter):
         if iter == IterUpdate[comptUpdate]:
             # update DINConvAE model
@@ -71,26 +73,31 @@ def FP_solver(dict_global_Params,genFilename,x_train,x_train_missing,mask_train,
         x_test_pred     = global_model_FP.predict([x_test_init,mask_test])
 
         # trained AE applied to gap-free data
-        rec_AE_Tr       = model_AE.predict([x_train,np.ones((mask_train.shape))])
-        rec_AE_Tt       = model_AE.predict([x_test,np.ones((mask_test.shape))])
+        icov         = np.arange(size_tw,2*size_tw)
+        gt_train_wc  = np.concatenate([gt_train,x_train_init[:,:,:,icov]],axis=3)
+        order        = np.stack([np.arange(i*size_tw,(i+1)*size_tw) for i in range(N_cov+1)]).T.flatten()
+        gt_train_wc  = gt_train_wc[:,:,:,order]
+        gt_test_wc   = np.concatenate([gt_test,x_test_init[:,:,:,icov]],axis=3)
+        order        = np.stack([np.arange(i*size_tw,(i+1)*size_tw) for i in range(N_cov+1)]).T.flatten()
+        gt_test_wc   = gt_test_wc[:,:,:,order]
+        rec_AE_Tr    = model_AE.predict([gt_train_wc,np.ones((mask_train.shape))])
+        rec_AE_Tt    = model_AE.predict([gt_test_wc,np.ones((mask_test.shape))])
 
         # remove additional covariates from variables
         if include_covariates == True:
-            mask_train_wc, x_train_wc, x_train_init_wc, x_train_missing_wc,\
-            mask_test_wc, x_test_wc, x_test_init_wc, x_test_missing_wc,\
+            mask_train_wc, x_train_wc, x_train_init_wc,\
+            mask_test_wc, x_test_wc, x_test_init_wc,\
             meanTr_wc, stdTr_wc=\
-            mask_train, x_train, x_train_init, x_train_missing,\
-            mask_test, x_test, x_test_init, x_test_missing,\
+            mask_train, x_train, x_train_init,\
+            mask_test, x_test, x_test_init,\
             meanTr, stdTr
             index = np.arange(0,(N_cov+1)*size_tw,(N_cov+1))
             mask_train      = mask_train[:,:,:,index]
             x_train         = x_train[:,:,:,index]
             x_train_init    = x_train_init[:,:,:,index]
-            x_train_missing = x_train_missing[:,:,:,index]
             mask_test      = mask_test[:,:,:,index]
             x_test         = x_test[:,:,:,index]
             x_test_init    = x_test_init[:,:,:,index]
-            x_test_missing = x_test_missing[:,:,:,index]
             meanTr = meanTr[0]
             stdTr  = stdTr[0]
 
@@ -103,26 +110,26 @@ def FP_solver(dict_global_Params,genFilename,x_train,x_train_missing,mask_train,
         if flagloadOIData == 1:
             # Save DINAE result         
             with open(saved_path, 'wb') as handle:
-                pickle.dump([((gt_test*stdTr)+meanTr+x_test_OI)[:,:,:,idT],((x_test_missing*stdTr)+meanTr+x_test_OI)[:,:,:,idT],\
+                pickle.dump([((gt_test*stdTr)+meanTr+x_test_OI)[:,:,:,idT],((x_test*stdTr)+meanTr+x_test_OI)[:,:,:,idT],\
                          ((x_test_pred*stdTr)+meanTr+x_test_OI)[:,:,:,idT],((rec_AE_Tt*stdTr)+meanTr+x_test_OI)[:,:,:,idT],x_test_OI[:,:,:,idT]], handle)
             with open(saved_path_Tr, 'wb') as handle:
-                pickle.dump([((gt_train*stdTr)+meanTr+x_train_OI)[:,:,:,idT],((x_train_missing*stdTr)+meanTr+x_train_OI)[:,:,:,idT],\
+                pickle.dump([((gt_train*stdTr)+meanTr+x_train_OI)[:,:,:,idT],((x_train*stdTr)+meanTr+x_train_OI)[:,:,:,idT],\
                          ((x_train_pred*stdTr)+meanTr+x_train_OI)[:,:,:,idT],((rec_AE_Tr*stdTr)+meanTr+x_train_OI)[:,:,:,idT],x_train_OI[:,:,:,idT]], handle)
         else:
             # Save DINAE result         
             with open(saved_path, 'wb') as handle:
-                pickle.dump([((gt_test*stdTr)+meanTr)[:,:,:,idT],((x_test_missing*stdTr)+meanTr)[:,:,:,idT],\
+                pickle.dump([((gt_test*stdTr)+meanTr)[:,:,:,idT],((x_test*stdTr)+meanTr)[:,:,:,idT],\
                          ((x_test_pred*stdTr)+meanTr)[:,:,:,idT],((rec_AE_Tt*stdTr)+meanTr)[:,:,:,idT], x_test_OI[:,:,:,idT]], handle)
             with open(saved_path_Tr, 'wb') as handle:
-                pickle.dump([((gt_train*stdTr)+meanTr)[:,:,:,idT],((x_train_missing*stdTr)+meanTr)[:,:,:,idT],\
+                pickle.dump([((gt_train*stdTr)+meanTr)[:,:,:,idT],((x_train*stdTr)+meanTr)[:,:,:,idT],\
                          ((x_train_pred*stdTr)+meanTr)[:,:,:,idT],((rec_AE_Tr*stdTr)+meanTr)[:,:,:,idT], x_train_OI[:,:,:,idT]], handle)
 
         # reset variables with additional covariates
         if include_covariates == True:
-            mask_train, x_train, x_train_init, x_train_missing,\
-            mask_test, x_test, x_test_init, x_test_missing,\
+            mask_train, x_train, x_train_init,\
+            mask_test, x_test, x_test_init,\
             meanTr, stdTr=\
-            mask_train_wc, x_train_wc, x_train_init_wc, x_train_missing_wc,\
-            mask_test_wc, x_test_wc, x_test_init_wc, x_test_missing_wc,\
+            mask_train_wc, x_train_wc, x_train_init_wc,\
+            mask_test_wc, x_test_wc, x_test_init_wc,\
             meanTr_wc, stdTr_wc
 
